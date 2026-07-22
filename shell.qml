@@ -58,7 +58,7 @@ ShellRoot {
                 Clock { }
                 
 
-
+ 
             }
 
             Component {
@@ -66,7 +66,7 @@ ShellRoot {
                     
                 MultiEffect {
                     blurEnabled: true
-                    blur: barWindow.implicitHeight * 0.00001
+                    blur: barWindow.implicitHeight * 0.0005
                     brightness: 0.15
                 }
             }

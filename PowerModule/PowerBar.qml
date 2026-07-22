@@ -61,7 +61,7 @@ PanelWindow {
             }
             
 
-            PowerBarButton { title: updateAvailable ? (numberOfPackages) + " Packages" : "No Update" ; icon: updateAvailable ? "0xeac2" : "0xe302";
+            PowerBarButton { title: updateAvailable ? (numberOfPackages) + " Package" + (numberOfPackages == 1 ? "" : "s") : "No Update" ; icon: updateAvailable ? "0xeac2" : "0xe302";
             
                 id: updateButton
 

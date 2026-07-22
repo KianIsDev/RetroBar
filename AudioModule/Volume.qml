@@ -11,7 +11,8 @@ RowLayout {
     id: root
     spacing: 0.05 * innerVerticalheight
     layer.enabled: true
-        layer.effect: blurComponent
+    layer.effect: blurComponent
+    
     property var verticalMargin: innerVerticalheight * 0.8
 
     property var sink: Pipewire.defaultAudioSink

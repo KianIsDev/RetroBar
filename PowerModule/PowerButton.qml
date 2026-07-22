@@ -4,9 +4,13 @@ import QtQuick
 Text {
     text: String.fromCodePoint(0xf011)
     color: '#a489ca'
+
+    layer.enabled: true
+    layer.effect: blurComponent
+
     font {
         family: "JetBrainsMono Nerd Font Propo"
-        pixelSize: 15
+        pixelSize: 0.65 * parent.height
     }
 
     MouseArea {
