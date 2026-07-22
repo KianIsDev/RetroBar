@@ -27,6 +27,7 @@ RowLayout {
     property var workspaces: Hyprland.workspaces.values
     property int focusedWorkspace: Hyprland.focusedWorkspace?.id || 0
 
+    // Prioritized list of apps and their icons. bigger index is better
     property list<QtObject> prioritizedApps: [
         AppIcon {
             names: [ "" ]; icon: "";
@@ -119,6 +120,8 @@ RowLayout {
     property list<string> workspaceIcons
     property list<int> workspaceIconPriorities
 
+
+    // "+" Add Workspace Button
     Rectangle {
         implicitHeight: innerVerticalheight
         implicitWidth: 0.5 * innerVerticalheight
@@ -134,6 +137,8 @@ RowLayout {
                 pixelSize: 0.6 * innerVerticalheight
             }
         }
+
+        // Finds smallest available workspace number and opens it
         MouseArea {
             anchors.fill: parent
             onClicked: {
@@ -161,16 +166,16 @@ RowLayout {
 
                 Hyprland.dispatch("hl.dsp.focus({ workspace = " + (smallestAvailable) + " })")
 
+                //Updates workspace icons to make sure we display the correct apps
                 workspaceIconProcess.running = true
-
-
             }
         }
     }
 
+    // Workspaces for each monitor
     Repeater {
         model: lay.monitors
-
+        
         RowLayout {
             spacing: -0.01 * innerVerticalheight
 
@@ -178,6 +183,7 @@ RowLayout {
 
             required property int index
 
+            // Hides monitor icon, if only 1 monitor is detected
             Text {
                 visible: lay.monitors.length > 1
                 text: String.fromCodePoint(0xf0379)
@@ -188,27 +194,27 @@ RowLayout {
                 }
             }
 
+            // Hides monitor number, if only 1 monitor is detected
             Text {
                 visible: lay.monitors.length > 1
-
                 color: '#ffffff'
-                text: (index + 1) //workspaces[0].active  //monitors[0].activeWorkspace.id
-
+                text: (index + 1)
                 font {
                     family: "JetBrainsMono Nerd Font Propo"
                     pixelSize: 0.36 * innerVerticalheight
                 }
             }
 
+            // Little spacer
             Item {
                 implicitWidth: 0.12 * innerVerticalheight
             }
 
-
+            // workspace Boxes
             RowLayout {
                 
                 spacing: 0.08 * innerVerticalheight
-                    
+                
                 Repeater {
                     model: lay.workspaces
                     
@@ -222,6 +228,7 @@ RowLayout {
                         property bool isActive: actualWorkspace.active
                         property bool isFocused: focusedWorkspace == actualWorkspace.id
 
+                        // Hides if the workspace is not on this monitor
                         visible: actualWorkspace.monitor != null ? actualWorkspace.monitor.id == monitorId.index : false
 
                         implicitHeight: 0.82 * innerVerticalheight
@@ -233,6 +240,7 @@ RowLayout {
 
                         color: isActive ? (isFocused ? '#71aa78ef' : '#40aa78ef' ) : '#17ffffff'
 
+                        // Icon and workspace number
                         RowLayout {
                             spacing: 1
                             anchors.centerIn: parent
@@ -268,9 +276,7 @@ RowLayout {
 
                         }
 
-
-
-
+                        // Brings the selected workspace in focus
                         MouseArea {
                             anchors.fill: parent
                             onClicked: Hyprland.dispatch("hl.dsp.focus({ workspace = " + (actualWorkspace.id) + " })")
@@ -287,7 +293,7 @@ RowLayout {
 
     }
 
-    
+    // Finds correct icon to display for each workspace
     Process {
         id:workspaceIconProcess
         running: true
@@ -295,6 +301,7 @@ RowLayout {
         stdout: StdioCollector {
             onStreamFinished: {
                 
+                // Minimum length of array
                 var length = 3
                 for (var i = 0; i < lay.workspaces.length; i++) {
                     
@@ -311,9 +318,10 @@ RowLayout {
 
                 var parts = this.text.split('Window ')
 
+                // Repeats for each window application running
                 for (var i = 1; i < parts.length; i++) {
 
-                    //console.log(parts[i].substring(parts[i].indexOf("class:") + 7, parts[i].indexOf("title:") - 2))
+                    // Extract relevant information
                     var appName = parts[i].substring(parts[i].indexOf("class:") + 7, parts[i].indexOf("title:") - 2)
                     var title = parts[i].substring(parts[i].indexOf("title:") + 7, parts[i].indexOf("initialClass:") - 2).trim()
                     var occupiedWorkspaceString = parts[i].substring(parts[i].indexOf("workspace:") + 11)
@@ -338,6 +346,7 @@ RowLayout {
                         appName = appName.substring(0, appName.indexOf("."))
                     }
                     
+                    // Compares apps to their prioritized index. Bigger is better
                     for (var j = 0; j < prioritizedApps.length; j++) {
 
                         for (var k = 0; k < prioritizedApps[j].names.length; k++) {
@@ -355,6 +364,7 @@ RowLayout {
                                 
                                 var foundTitle = false
 
+                                // Uses title-specific icon if available
                                 if ( prioritizedApps[j].useTitle ) {
 
                                     for (var l = 0; l < prioritizedApps[j].alternateTitles.length; l++) {
@@ -375,7 +385,6 @@ RowLayout {
                                 
                                 workspaceIcons[occupiedWorkspace] = prioritizedApps[j].icon
                                 workspaceIconPriorities[occupiedWorkspace] = j
-
                             
                             }
 
@@ -389,14 +398,11 @@ RowLayout {
                 if (debugApps)
                         console.log("")
 
-                //console.log(prioritizedAppsTest[0].useTitle)
-                
-                
             }
         }
     }
 
-
+    // Update interval for workspace icons
     Timer {
         interval: 10000
         running: true
@@ -406,126 +412,4 @@ RowLayout {
         }
     }
 
-
-
 }
-
-
-/*
-    Process {
-        id: mediaProcess
-        //playerctl
-        command: [ "hyprctl", "clients" ]
-        stdout: SplitParser {
-            onRead: data => {
-                if (!data) {
-                    playing = "no data!"
-                    return
-                }
-                var parts = data.trim().split('\\spacerPlaceholder\\')
-                title = parts[0] || "unknown"
-                artist = parts[1] || "unknown"
-                imageSource = parts[2] || ""
-            }
-        }
-        Component.onCompleted: running = true
-    }
-*/
-
-    /*
-    Repeater {
-        model: lay.workspaces
-
-        Rectangle {
-            id: wsButton
-            required property int index
-
-            property var ws: Hyprland.workspaces.values.find(w => w.id === index + 1)
-            property bool isActive: Hyprland.focusedWorkspace?.id === (index + 1)
-
-            implicitWidth: lable.implicitWidth + 12
-            implicitHeight: 18
-            radius: 6
-
-            color: isActive ? '#40aa78ef' : (ws ? '#17ffffff' : '#0fa319ff')
-
-            Behavior on color {
-                ColorAnimation { duration: 150 }
-            }
-
-            visible: ws && lay.workspaces[index].monitor.id === 0
-
-            Text {
-                id: lable
-
-                anchors.centerIn: parent
-                text: wsButton.index + 1
-                color: wsButton.isActive ? '#aa78ef' : (wsButton.ws ? "#ffffff" : "transparent")
-
-                font {
-                    family: "SF Mono"
-                    pixelSize: 10
-                    weight: 500
-                }
-            }
-
-            MouseArea {
-                anchors.fill: parent
-                onClicked: Hyprland.dispatch("hl.dsp.focus({ workspace = " + (parent.index + 1) + " })")
-                
-            }
-
-        }
-    }
-
-    Text {
-        color: '#ffffff'
-        text: "Monitor 2:" //workspaces[0].active  //monitors[0].activeWorkspace.id
-    }
-
-    Repeater {
-        model: 9
-
-        Rectangle {
-            id: wsButton
-            required property int index
-
-            property var ws: Hyprland.workspaces.values.find(w => w.id === index + 1)
-            property bool isActive: Hyprland.focusedWorkspace?.id === (index + 1)
-
-            implicitWidth: lable.implicitWidth + 12
-            implicitHeight: 18
-            radius: 6
-
-            color: isActive ? '#40aa78ef' : (ws ? '#17ffffff' : '#0fa319ff')
-
-            Behavior on color {
-                ColorAnimation { duration: 150 }
-            }
-            
-            visible: true //ws && lay.workspaces[index].monitor.id === 1
-
-            Text {
-                id: lable
-
-
-                anchors.centerIn: parent
-                text: wsButton.index + 1
-                color: wsButton.isActive ? '#aa78ef' : (wsButton.ws ? "#ffffff" : "transparent")
-
-                font {
-                    family: "SF Mono"
-                    pixelSize: 10
-                    weight: 500
-                }
-            }
-
-            MouseArea {
-                anchors.fill: parent
-                onClicked: Hyprland.dispatch("hl.dsp.focus({ workspace = " + (parent.index + 1) + " })")
-                
-            }
-
-        }
-    }
-    */
