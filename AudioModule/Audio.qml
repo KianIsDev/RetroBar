@@ -1,13 +1,21 @@
 import Quickshell
 import QtQuick
 import QtQuick.Layouts
+import Quickshell.Services.Pipewire 
+import Quickshell.Hyprland
+import "root:"
 
 Rectangle {
-    id: audioFrame
+    id: root
+
+    property var sink: Pipewire.defaultAudioSink
+    readonly property bool ready: sink && sink.ready
+    readonly property bool muted: ready && sink.audio.muted
+    readonly property int volume: ready ? Math.round(sink.audio.volume * 100) : 0
 
     property var outerHorizontalMargin: (0.15 * height)
     property var innerVerticalheight: height - (0.1 * height)
-    property var rowSpacing: (0.1 * height)
+    property var rowSpacing: (0.2 * height)
 
 
     color: '#55555588'
@@ -15,32 +23,52 @@ Rectangle {
     implicitHeight: parent.height - (0.1 * parent.height)
     radius: (0.1 * parent.height)
 
-    Rectangle {
-        
+
+    RowLayout {
         id: displayFrame
-        color: '#111111'
 
-        y: parent.height / 2 - implicitHeight / 2
-        x: parent.implicitWidth / 2 - implicitWidth / 2
+        anchors.fill: parent
         
-        implicitWidth: (audioLayout.implicitWidth) + outerHorizontalMargin * 2
-        radius: (0.3 * innerVerticalheight)
-        implicitHeight: innerVerticalheight
+        spacing: 2
 
-        RowLayout {
-            id: audioLayout
+        Item { }
+
+        VolumeDial { }
+
+        Rectangle {
             
-            x: outerHorizontalMargin
+            color: '#111111'
+
             y: parent.height / 2 - implicitHeight / 2
+            x: parent.implicitWidth / 2 - implicitWidth / 2
+            
+            implicitWidth: (audioLayout.implicitWidth) + outerHorizontalMargin * 2
+            radius: (0.3 * innerVerticalheight)
+            implicitHeight: innerVerticalheight
 
-            spacing: rowSpacing
+            RowLayout {
+                id: audioLayout
+                
+                x: outerHorizontalMargin
+                y: parent.height / 2 - implicitHeight / 2
 
-            Volume { }
+                spacing: rowSpacing
 
-            Media { }
-    
+
+                VolumeText { }
+
+                //Volume { }
+
+                Media { }
+
+        
+            }
+
+
         }
+    }
 
-
+    PwObjectTracker {
+        objects: [root.sink]
     }
 }

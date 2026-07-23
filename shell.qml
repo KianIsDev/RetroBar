@@ -43,7 +43,7 @@ ShellRoot {
 
                 Bar { }
 
-                Workspaces { }   
+                Workspaces { }
 
                 Item {
                     Layout.fillWidth: true

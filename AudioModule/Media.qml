@@ -41,8 +41,36 @@ RowLayout {
 
             anchors.fill: parent
 
-            fillMode: Image.PreserveAspectCrop
+            fillMode: Image.PreserveAspectCrop 
             source: imageSource
+
+            Text {
+                anchors.centerIn: parent
+
+                text: String.fromCodePoint(0xede9)
+                color: mouse.hovered ? '#ffffff' : '#00000000'
+
+                opacity: 1
+
+                font {
+                    family: "JetBrainsMono Nerd Font Propo"
+                    pixelSize: 0.9 * innerVerticalheight
+                }
+            }
+
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: {
+                Hyprland.dispatch("hl.dsp.exec_cmd( \"playerctl play-pause\" )")
+            }
+        }
+
+        HoverHandler {
+            id: mouse
+            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+            cursorShape: Qt.PointingHandCursor
         }
     }
 
@@ -106,6 +134,7 @@ RowLayout {
 
     Process {
         id: mediaProcess
+        running: true
         //playerctl
         command: ["playerctl", "metadata", "--format", "{{title}}\\spacerPlaceholder\\{{artist}}\\spacerPlaceholder\\{{mpris:artUrl}}"]
         stdout: SplitParser {
@@ -115,16 +144,17 @@ RowLayout {
                     return
                 }
                 var parts = data.trim().split('\\spacerPlaceholder\\')
-                title = parts[0] || "unknown"
-                artist = parts[1] || "unknown"
+                title = parts[0] || "unknown station"
+                artist = parts[1] || "---"
                 imageSource = parts[2] || ""
             }
         }
-        Component.onCompleted: running = true
+        //Component.onCompleted: running = true
     }
 
     Process {
         id: statusProcess
+        running: true
         //playerctl
         command: ["playerctl", "status"]
         stdout: StdioCollector {

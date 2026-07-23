@@ -2,6 +2,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
 import QtQuick
+import QtQuick 2.0
 import QtQuick.Layouts
 
 RowLayout {
@@ -120,6 +121,7 @@ RowLayout {
     property list<string> workspaceIcons
     property list<int> workspaceIconPriorities
 
+    property list<var> runningApps
 
     // "+" Add Workspace Button
     Rectangle {
@@ -279,9 +281,25 @@ RowLayout {
                         // Brings the selected workspace in focus
                         MouseArea {
                             anchors.fill: parent
-                            onClicked: Hyprland.dispatch("hl.dsp.focus({ workspace = " + (actualWorkspace.id) + " })")
+                            acceptedButtons: Qt.LeftButton | Qt.RightButton
+                            onClicked: {
+
+                                if (mouse.button === Qt.RightButton) {
+
+                                    workspaceAssociatedAppsProcess.running = true
+
+
+                                } else if (mouse.button === Qt.LeftButton) {
+                                    Hyprland.dispatch("hl.dsp.focus({ workspace = " + (actualWorkspace.id) + " })")
+
+                                }
+
+                            
+                            }
                             
                         }
+
+
 
                     }
 
@@ -302,14 +320,7 @@ RowLayout {
             onStreamFinished: {
                 
                 // Minimum length of array
-                var length = 3
-                for (var i = 0; i < lay.workspaces.length; i++) {
-                    
-                    if (lay.workspaces[i].id > length){
-                        length = lay.workspaces[i].id
-                    }
-
-                }
+                var length = getHighestWorkspaceNumber()
 
                 workspaceIcons.length = 0
                 workspaceIcons.length = length + 1
@@ -322,29 +333,17 @@ RowLayout {
                 for (var i = 1; i < parts.length; i++) {
 
                     // Extract relevant information
-                    var appName = parts[i].substring(parts[i].indexOf("class:") + 7, parts[i].indexOf("title:") - 2)
-                    var title = parts[i].substring(parts[i].indexOf("title:") + 7, parts[i].indexOf("initialClass:") - 2).trim()
-                    var occupiedWorkspaceString = parts[i].substring(parts[i].indexOf("workspace:") + 11)
-                    occupiedWorkspaceString = occupiedWorkspaceString.substring(0, occupiedWorkspaceString.indexOf(' ')).trim()
+                    var appName = extractProperty(parts[i], "class:", "title:")
+                    var title = extractProperty(parts[i], "title:", "initialClass:")
+                    var occupiedWorkspace = extractWorkspace(parts[i])
                     
-                    var occupiedWorkspace = parseInt(occupiedWorkspaceString) || -1
 
                     if (occupiedWorkspace == -1){
                         continue;
                     }
 
-                    if (appName.indexOf("inecraft") != -1) {
-                        appName = "minecraft"
-                    }
-
-                    if (appName.indexOf("steam_app") != -1) {
-                        appName = "steam_app"
-                    }
-
-                    if (appName.indexOf("org.") != -1 || appName.indexOf("com.") != -1) {
-                        appName = appName.substring(appName.indexOf(".") + 1)
-                        appName = appName.substring(0, appName.indexOf("."))
-                    }
+                    appName = clanName(appName)
+                    
                     
                     // Compares apps to their prioritized index. Bigger is better
                     for (var j = 0; j < prioritizedApps.length; j++) {
@@ -360,8 +359,6 @@ RowLayout {
                                 if (j < workspaceIconPriorities[occupiedWorkspace]) {
                                     break;
                                 }
-
-                                
                                 var foundTitle = false
 
                                 // Uses title-specific icon if available
@@ -375,9 +372,7 @@ RowLayout {
                                             workspaceIconPriorities[occupiedWorkspace] = j + 1
                                             break;
                                         }
-                                        
                                     }
-
                                 }
 
                                 if ( foundTitle )
@@ -385,22 +380,68 @@ RowLayout {
                                 
                                 workspaceIcons[occupiedWorkspace] = prioritizedApps[j].icon
                                 workspaceIconPriorities[occupiedWorkspace] = j
-                            
                             }
-
                         }
-
                     }
 
                     if (debugApps)
                         console.log(appName + "_" + occupiedWorkspace + "_" + title)
                 }
                 if (debugApps)
-                        console.log("")
+                    console.log("")
 
             }
         }
     }
+
+    function extractProperty(text, property, nextProperty) {
+
+        var extractedProperty = text.substring(text.indexOf(property) + property.length + 1, text.indexOf(nextProperty) - 2).trim()
+        return extractedProperty
+
+    }
+
+    function extractWorkspace(text) {
+
+        var occupiedWorkspaceString = text.substring(text.indexOf("workspace:") + 11)
+        occupiedWorkspaceString = occupiedWorkspaceString.substring(0, occupiedWorkspaceString.indexOf(' ')).trim()
+
+        var occupiedWorkspace = parseInt(occupiedWorkspaceString) || -1
+
+        return occupiedWorkspace
+
+    }
+
+    function clanName(appName) {
+
+        if (appName.indexOf("inecraft") != -1) {
+            appName = "minecraft"
+        }
+
+        if (appName.indexOf("steam_app") != -1) {
+            appName = "steam_app"
+        }
+
+        if (appName.indexOf("org.") != -1 || appName.indexOf("com.") != -1) {
+            appName = appName.substring(appName.indexOf(".") + 1)
+            appName = appName.substring(0, appName.indexOf("."))
+        }
+
+        return appName
+    }
+
+    function getHighestWorkspaceNumber() {
+
+        var length = 3
+        for (var i = 0; i < lay.workspaces.length; i++) {
+            if (lay.workspaces[i].id > length){
+                length = lay.workspaces[i].id
+            }
+        }
+
+        return length
+    }
+
 
     // Update interval for workspace icons
     Timer {
@@ -409,6 +450,59 @@ RowLayout {
         repeat: true
         onTriggered: {
             workspaceIconProcess.running = true
+        }
+    }
+
+    Process {
+        id: workspaceAssociatedAppsProcess
+        command: [ "hyprctl", "clients" ]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                
+                var parts = this.text.split('Window ')
+
+                var length = getHighestWorkspaceNumber() + 1
+
+
+                runningApps.length = 0
+                //runningApps = new Array(length).fill().map(u => ({}))
+                //runningApps = new Array(length).fill().map("WorkspaceApps")
+
+                runningApps = Array(length).fill([])
+
+                for (var i = 1; i < length; i++) {
+                    
+                    runningApps[i] = Array(parts.length - 1).fill("")
+                }
+
+                //console.log(runningApps[0].apps.length)
+
+
+                // Repeats for each window application running
+                for (var i = 1; i < parts.length; i++) {
+
+                    // Extract relevant information
+                    var appName = extractProperty(parts[i], "class:", "title:")
+                    var title = extractProperty(parts[i], "title:", "initialClass:")
+                    var occupiedWorkspace = extractWorkspace(parts[i])
+                    
+
+                    if (occupiedWorkspace == -1){
+                        continue;
+                    }
+
+                    appName = clanName(appName)
+
+                    runningApps[occupiedWorkspace][i] = appName
+
+                }
+
+                for (var i = 0; i < length; i++) {
+                    
+                    console.log(runningApps[i])
+                }
+
+            }
         }
     }
 
